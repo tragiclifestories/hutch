@@ -7,6 +7,23 @@ require 'carrot-top'
 require 'securerandom'
 
 module Hutch
+  class ErrorDispatcher
+    def initialize(config)
+      @config = config
+    end
+
+    def handle(*args)
+      handlers.each do |backend|
+        backend.handle(*args)
+      end
+    end
+
+    private
+    def handlers
+      @config[:error_handlers]
+    end
+  end
+
   class Worker
     include Logging
 
@@ -77,9 +94,7 @@ module Hutch
     end
 
     def handle_error(*args)
-      Hutch::Config[:error_handlers].each do |backend|
-        backend.handle(*args)
-      end
+      error_dispatcher.handle(*args)
     end
 
     def acknowledge_error(delivery_info, properties, broker, ex)
@@ -89,7 +104,7 @@ module Hutch
         backend.handle(delivery_info, properties, broker, ex)
       end
     end
-
+
     def consumers=(val)
       if val.empty?
         logger.warn "no consumer loaded, ensure there's no configuration issue"
@@ -104,6 +119,10 @@ module Hutch
     private
 
     attr_accessor :setup_procs
+
+    def error_dispatcher
+      @error_dispatcher ||= ErrorDispatcher.new(Hutch::Config)
+    end
 
     def unique_consumer_tag
       prefix = Hutch::Config[:consumer_tag_prefix]
