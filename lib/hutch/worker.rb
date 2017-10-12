@@ -1,29 +1,13 @@
 require 'hutch/message'
 require 'hutch/logging'
 require 'hutch/broker'
+require 'hutch/error_dispatcher'
 require 'hutch/acknowledgements/nack_on_all_failures'
 require 'hutch/waiter'
 require 'carrot-top'
 require 'securerandom'
 
 module Hutch
-  class ErrorDispatcher
-    def initialize(config)
-      @config = config
-    end
-
-    def handle(*args)
-      handlers.each do |backend|
-        backend.handle(*args)
-      end
-    end
-
-    private
-    def handlers
-      @config[:error_handlers]
-    end
-  end
-
   class Worker
     include Logging
 
